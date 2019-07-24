@@ -24,13 +24,13 @@ func uniqueInts(s []int) []int {
 	return s
 }
 
-type KV struct {
+type kv struct {
 	Key   string
 	Value int
 }
 
-type KVList []KV
+type kvList []kv
 
-func (l KVList) Len() int           { return len(l) }
-func (l KVList) Less(i, j int) bool { return l[i].Value < l[j].Value }
-func (l KVList) Swap(i, j int)      { l[i], l[j] = l[j], l[i] }
+func (l kvList) Len() int           { return len(l) }
+func (l kvList) Less(i, j int) bool { return l[i].Value < l[j].Value }
+func (l kvList) Swap(i, j int)      { l[i], l[j] = l[j], l[i] }

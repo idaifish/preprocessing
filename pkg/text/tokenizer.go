@@ -1,38 +1,53 @@
+// Package text provides utilities for text input preprocessing.
 package text
 
-import "sort"
+import (
+	"errors"
+	"math"
+	"sort"
+)
 
+// Default flags.
 const (
 	DefaultFilters   = "!\"#$%&()*+,-./:;<=>?@[\\]^_`{|}~\t\n"
 	DefaultLower     = true
-	DefaultSeparator = " "
+	DefaultSplit     = " "
 	DefaultOOVToken  = ""
 	DefaultCharLevel = false
 )
 
+// Built-in Errors
+var (
+	ErrValue       = errors.New("Specify a dimension or fit on some text data first")
+	ErrUnknownMode = errors.New("Unknown vectorization mode")
+)
+
+// Config represents some flags of tokenizer.
 type Config struct {
 	Filters   string
 	Lower     bool
-	Separator string
+	Split     string
 	OOVToken  string
 	CharLevel bool
 }
 
-func NewConfig(filters string, lower bool, separator string, oovtoken string, charlevel bool) *Config {
-	return &Config{
+// NewConfig returns a custom Config.
+func NewConfig(filters string, lower bool, split string, oovtoken string, charlevel bool) Config {
+	return Config{
 		Filters:   filters,
 		Lower:     lower,
-		Separator: separator,
+		Split:     split,
 		OOVToken:  oovtoken,
 		CharLevel: charlevel,
 	}
 }
 
+// NewDefaultConfig returns default Config.
 func NewDefaultConfig() Config {
 	return Config{
 		Filters:   DefaultFilters,
 		Lower:     DefaultLower,
-		Separator: DefaultSeparator,
+		Split:     DefaultSplit,
 		OOVToken:  DefaultOOVToken,
 		CharLevel: DefaultCharLevel,
 	}
@@ -40,7 +55,7 @@ func NewDefaultConfig() Config {
 
 // Tokenizer allows to vectorize a text corpus, by turning each text into either a sequence of integers (each integer being the index of a token in a dictionary) or into a vector where the coefficient for each token could be binary, based on word count, based on tf-idf...
 type Tokenizer struct {
-	NumWords      int32
+	NumWords      int
 	WordCounts    map[string]int
 	WordDocs      map[string]int
 	DocumentCount int
@@ -50,15 +65,16 @@ type Tokenizer struct {
 	Config        Config
 }
 
-func NewTokenizer(numWords int32) *Tokenizer {
+// NewTokenizer returns a tokenizer pointer.
+func NewTokenizer(numWords int) *Tokenizer {
 	return &Tokenizer{
 		NumWords:      numWords,
-		WordCounts:    make(map[string]int, 1),
-		WordDocs:      make(map[string]int, 1),
+		WordCounts:    map[string]int{},
+		WordDocs:      map[string]int{},
 		DocumentCount: 0,
-		WordIndex:     make(map[string]int, 1),
-		IndexWord:     make(map[int]string, 1),
-		IndexDocs:     make(map[int]int, 1),
+		WordIndex:     map[string]int{},
+		IndexWord:     map[int]string{},
+		IndexDocs:     map[int]int{},
 		Config:        NewDefaultConfig(),
 	}
 }
@@ -81,17 +97,17 @@ func (tokenizer *Tokenizer) FitOnTexts(texts []string) {
 			tokenizer.WordDocs[word]++
 		}
 
-		kvList := make(KVList, len(tokenizer.WordCounts))
+		wordList := make(kvList, len(tokenizer.WordCounts))
 		for k, v := range tokenizer.WordCounts {
-			kvList = append(kvList, KV{k, v})
+			wordList = append(wordList, kv{k, v})
 		}
-		sort.Sort(kvList)
+		sort.Sort(wordList)
 
 		var sortedWords []string
 		if tokenizer.Config.OOVToken != "" {
 			sortedWords = []string{tokenizer.Config.OOVToken}
 		}
-		for _, kv := range kvList {
+		for _, kv := range wordList {
 			sortedWords = append(sortedWords, kv.Key)
 		}
 
@@ -107,6 +123,7 @@ func (tokenizer *Tokenizer) FitOnTexts(texts []string) {
 
 }
 
+// FitOnSequences updates internal vocabulary based on a list of sequences.
 func (tokenizer *Tokenizer) FitOnSequences(sequences []int) {
 	tokenizer.DocumentCount += len(sequences)
 	for s := range uniqueInts(sequences) {
@@ -114,10 +131,87 @@ func (tokenizer *Tokenizer) FitOnSequences(sequences []int) {
 	}
 }
 
-func (tokenizer *Tokenizer) TextsToSequences(texts []string) {
+// TextsToSequences transforms each text in texts to a sequence of integers.
+func (tokenizer *Tokenizer) TextsToSequences(texts []string) (sequences [][]int) {
+	oovTokenIndex, oovTokenIndexOK := tokenizer.WordIndex[tokenizer.Config.OOVToken]
 
+	for _, text := range texts {
+		wordSeqs := TextToWordSequence(text, tokenizer.Config)
+		sequence := []int{}
+		for _, word := range wordSeqs {
+			if wordIndex, ok := tokenizer.WordIndex[word]; ok {
+				// out of vocabulary
+				if wordIndex >= tokenizer.NumWords && oovTokenIndexOK {
+					sequence = append(sequence, oovTokenIndex)
+				}
+				sequence = append(sequence, wordIndex)
+			}
+
+			if oovTokenIndexOK {
+				sequence = append(sequence, oovTokenIndex)
+			}
+		}
+
+		sequences = append(sequences, sequence)
+	}
+
+	return
 }
 
-func (tokenizer *Tokenizer) SequencesToTexts(texts []string) {
+// SequencesToMatrix converts a list of sequences into matrix [][]float64.
+func (tokenizer *Tokenizer) SequencesToMatrix(sequences [][]int, mode string) (matrix [][]float64) {
+	if tokenizer.NumWords == 0 && len(tokenizer.WordIndex) == 0 {
+		panic(ErrValue)
+	}
 
+	if mode == "tfidf" && tokenizer.DocumentCount == 0 {
+		panic(ErrValue)
+	}
+
+	for i, sequence := range sequences {
+		if len(sequence) == 0 {
+			continue
+		}
+
+		counts := map[int]int{}
+		for _, seq := range sequence {
+			if seq >= tokenizer.NumWords {
+				continue
+			}
+			counts[seq]++
+
+			for j, c := range counts {
+				switch mode {
+				case "count":
+					matrix[i][j] = float64(c)
+				case "freq":
+					matrix[i][j] = float64(c / len(sequence))
+				case "binary":
+					matrix[i][j] = float64(1)
+				case "tfidf":
+					tf := 1 + math.Log(float64(c))
+					var idf float64
+					if docs, ok := tokenizer.IndexDocs[j]; ok {
+						idf = math.Log(float64(1 + tokenizer.DocumentCount/(1+docs)))
+					} else {
+						idf = math.Log(float64(1 + tokenizer.DocumentCount))
+					}
+					matrix[i][j] = tf * idf
+				default:
+					panic(
+
+						ErrUnknownMode)
+				}
+			}
+		}
+	}
+
+	return
+}
+
+// TextsToMatrix convert a list of texts to matrix [][]float64.
+func (tokenizer *Tokenizer) TextsToMatrix(texts []string, mode string) [][]float64 {
+	sequences := tokenizer.TextsToSequences(texts)
+
+	return tokenizer.SequencesToMatrix(sequences, mode)
 }
