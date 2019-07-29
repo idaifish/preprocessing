@@ -67,7 +67,7 @@ type Tokenizer struct {
 }
 
 // NewTokenizer returns a tokenizer pointer.
-func NewTokenizer(numWords int) *Tokenizer {
+func NewTokenizer(numWords int, config Config) *Tokenizer {
 	return &Tokenizer{
 		NumWords:      numWords,
 		WordCounts:    map[string]int{},
@@ -76,7 +76,7 @@ func NewTokenizer(numWords int) *Tokenizer {
 		WordIndex:     map[string]int{},
 		IndexWord:     map[int]string{},
 		IndexDocs:     map[int]int{},
-		Config:        NewDefaultConfig(),
+		Config:        config,
 	}
 }
 
@@ -97,31 +97,35 @@ func (tokenizer *Tokenizer) FitOnTexts(texts []string) {
 		for _, word := range uniqueStrings(wordSeq) {
 			tokenizer.WordDocs[word]++
 		}
-
-		wordList := make(kvList, len(tokenizer.WordCounts))
-		for k, v := range tokenizer.WordCounts {
-			wordList = append(wordList, kv{k, v})
-		}
-		sort.Sort(wordList)
-
-		var sortedWords []string
-		if tokenizer.Config.OOVToken != "" {
-			sortedWords = []string{tokenizer.Config.OOVToken}
-		}
-		for _, kv := range wordList {
-			sortedWords = append(sortedWords, kv.Key)
-		}
-
-		for index, word := range sortedWords {
-			tokenizer.IndexWord[index+1] = word
-			tokenizer.WordIndex[word] = index + 1
-		}
-
-		for word, docs := range tokenizer.WordDocs {
-			tokenizer.IndexDocs[tokenizer.WordIndex[word]] = docs
-		}
 	}
 
+	wordList := make(kvList, 0)
+	for k, v := range tokenizer.WordCounts {
+		wordList = append(wordList, kv{k, v})
+	}
+	sort.Sort(wordList)
+	sort.SliceStable(wordList, func(i, j int) bool {
+		return wordList[i].Key < wordList[j].Key
+	})
+
+	var sortedWords []string
+	if tokenizer.Config.OOVToken != "" {
+		sortedWords = []string{tokenizer.Config.OOVToken}
+	}
+	for _, kv := range wordList {
+		sortedWords = append(sortedWords, kv.Key)
+	}
+
+	for index, word := range sortedWords {
+		tokenizer.IndexWord[index+1] = word
+	}
+	for index, word := range tokenizer.IndexWord {
+		tokenizer.WordIndex[word] = index
+	}
+
+	for word, docs := range tokenizer.WordDocs {
+		tokenizer.IndexDocs[tokenizer.WordIndex[word]] = docs
+	}
 }
 
 // FitOnSequences updates internal vocabulary based on a list of sequences.
@@ -146,9 +150,7 @@ func (tokenizer *Tokenizer) TextsToSequences(texts []string) (sequences [][]int)
 					sequence = append(sequence, oovTokenIndex)
 				}
 				sequence = append(sequence, wordIndex)
-			}
-
-			if oovTokenIndexOK {
+			} else if oovTokenIndexOK {
 				sequence = append(sequence, oovTokenIndex)
 			}
 		}
