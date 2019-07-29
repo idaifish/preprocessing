@@ -1,4 +1,5 @@
 // Package text provides utilities for text input preprocessing.
+// Go port of keras.preprocess.text
 package text
 
 import (
@@ -198,9 +199,7 @@ func (tokenizer *Tokenizer) SequencesToMatrix(sequences [][]int, mode string) (m
 					}
 					matrix[i][j] = tf * idf
 				default:
-					panic(
-
-						ErrUnknownMode)
+					panic(ErrUnknownMode)
 				}
 			}
 		}

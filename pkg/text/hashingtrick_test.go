@@ -15,7 +15,7 @@ func TestHashingTrick(t *testing.T) {
 	tests := []struct {
 		name          string
 		args          args
-		wantSequences []int64
+		wantSequences []int
 	}{
 		{
 			"hashing trick test",
@@ -25,7 +25,7 @@ func TestHashingTrick(t *testing.T) {
 				Md5,
 				NewDefaultConfig(),
 			},
-			[]int64{4, 1, 8, 1},
+			[]int{4, 1, 8, 1},
 		},
 	}
 	for _, tt := range tests {
