@@ -5,22 +5,19 @@ import (
 	"encoding/hex"
 	"errors"
 	"io"
-	"strconv"
+	"math/big"
 )
 
 // HashFunc is the type of function called for hashingtrick.
-type HashFunc func(string) int
+type HashFunc func(string) big.Int
 
 // Md5 hash function.
-func Md5(text string) int {
+func Md5(text string) (hashInt big.Int) {
 	h := md5.New()
 	io.WriteString(h, text)
-	hashInt, err := strconv.ParseInt((hex.EncodeToString(h.Sum(nil))[:15]), 16, 64)
-	if err != nil {
-		panic(err)
-	}
+	hashInt.SetString((hex.EncodeToString(h.Sum(nil))), 16)
 
-	return int(hashInt)
+	return
 }
 
 // HashingTrick converts a text to sequence of indexes.
@@ -31,7 +28,9 @@ func HashingTrick(text string, dimension int, hashFunc HashFunc, config Config) 
 
 	sequence := TextToWordSequence(text, config)
 	for _, seq := range sequence {
-		sequences = append(sequences, hashFunc(seq)%(dimension-1)+1)
+		hashInt := hashFunc(seq)
+		hashInt.Mod(&hashInt, new(big.Int).SetInt64(int64(dimension-1)))
+		sequences = append(sequences, int(hashInt.Int64())+1)
 	}
 
 	return

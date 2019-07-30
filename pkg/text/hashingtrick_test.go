@@ -25,7 +25,7 @@ func TestHashingTrick(t *testing.T) {
 				Md5,
 				NewDefaultConfig(),
 			},
-			[]int{4, 1, 8, 1},
+			[]int{8, 9, 2, 9},
 		},
 	}
 	for _, tt := range tests {
