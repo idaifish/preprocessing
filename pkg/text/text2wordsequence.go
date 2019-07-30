@@ -5,7 +5,7 @@ import (
 )
 
 // TextToWordSequence converts a text to a sequence of words.
-func TextToWordSequence(text string, config Config) []string {
+func TextToWordSequence(text string, config Config) (result []string) {
 	if config.Lower {
 		text = strings.ToLower(text)
 	}
@@ -17,7 +17,18 @@ func TextToWordSequence(text string, config Config) []string {
 
 	replacer := strings.NewReplacer(translateMap...)
 	text = replacer.Replace(text)
-	text = strings.Replace(text, config.Split, " ", -1)
 
-	return strings.Fields(text)
+	if config.CharLevel {
+		text = strings.Replace(text, config.Split, "", -1)
+		for _, c := range text {
+			if string(c) != " " {
+				result = append(result, string(c))
+			}
+		}
+		return
+	}
+
+	text = strings.Replace(text, config.Split, " ", -1)
+	result = strings.Fields(text)
+	return
 }

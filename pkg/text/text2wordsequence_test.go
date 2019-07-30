@@ -27,10 +27,10 @@ func TestTextToWordSequence(t *testing.T) {
 		{
 			"test2",
 			args{
-				"ali! veli? kırk dokuz elli",
+				"ali! veli? kÄ±rk dokuz elli",
 				NewDefaultConfig(),
 			},
-			[]string{"ali", "veli", "kırk", "dokuz", "elli"},
+			[]string{"ali", "veli", "kä±rk", "dokuz", "elli"},
 		},
 		{
 			"test3",
@@ -45,6 +45,20 @@ func TestTextToWordSequence(t *testing.T) {
 				),
 			},
 			[]string{"hello", "world"},
+		},
+		{
+			"test4",
+			args{
+				"你好! | WoRld!",
+				NewConfig(
+					DefaultFilters,
+					DefaultLower,
+					"|",
+					DefaultOOVToken,
+					true,
+				),
+			},
+			[]string{"你", "好", "w", "o", "r", "l", "d"},
 		},
 	}
 	for _, tt := range tests {
