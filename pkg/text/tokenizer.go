@@ -17,6 +17,9 @@ const (
 	DefaultCharLevel = false
 )
 
+// DefaultNgram (1, 1)
+var DefaultNgram = [2]int{1, 1}
+
 // Built-in Errors
 var (
 	ErrValue       = errors.New("Specify a dimension or fit on some text data first")
@@ -30,16 +33,18 @@ type Config struct {
 	Split     string
 	OOVToken  string
 	CharLevel bool
+	Ngram     [2]int
 }
 
 // NewConfig returns a custom Config.
-func NewConfig(filters string, lower bool, split string, oovtoken string, charlevel bool) Config {
+func NewConfig(filters string, lower bool, split string, oovtoken string, charlevel bool, ngram [2]int) Config {
 	return Config{
 		Filters:   filters,
 		Lower:     lower,
 		Split:     split,
 		OOVToken:  oovtoken,
 		CharLevel: charlevel,
+		Ngram:     ngram,
 	}
 }
 
@@ -51,6 +56,7 @@ func NewDefaultConfig() Config {
 		Split:     DefaultSplit,
 		OOVToken:  DefaultOOVToken,
 		CharLevel: DefaultCharLevel,
+		Ngram:     DefaultNgram,
 	}
 }
 

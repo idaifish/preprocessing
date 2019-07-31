@@ -75,11 +75,56 @@ func TestTokenizer_TextsToSequencesWithOOV(t *testing.T) {
 				DefaultSplit,
 				"oov",
 				DefaultCharLevel,
+				DefaultNgram,
 			))
 			tokenizer.FitOnTexts(corpus)
 
 			if gotSequences := tokenizer.TextsToSequences(tt.args.texts); !reflect.DeepEqual(gotSequences, tt.wantSequences) {
 				t.Errorf("Tokenizer.TextsToSequences() = %v, want %v", gotSequences, tt.wantSequences)
+			}
+		})
+	}
+}
+
+func TestTokenizer_TextsToSequencesWithNgram(t *testing.T) {
+	type args struct {
+		texts []string
+	}
+	tests := []struct {
+		name          string
+		args          args
+		wantSequences [][]int
+	}{
+		// TODO: Add test cases.
+		{
+			"text2sequences1",
+			args{
+				[]string{"This is a text document to analyze."},
+			},
+			[][]int{{27, 7, 4, 28}},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			corpus := []string{
+				"This is the first document.",
+				"This is the second second document.",
+				"And the third one.",
+				"Is this the first document?",
+			}
+			tokenizer := NewTokenizer(10, NewConfig(
+				DefaultFilters,
+				DefaultLower,
+				DefaultSplit,
+				DefaultOOVToken,
+				DefaultCharLevel,
+				[2]int{1, 3},
+			))
+			tokenizer.FitOnTexts(corpus)
+			// fmt.Printf("Vocabulary: %#v\n", tokenizer.IndexWord)
+
+			if gotSequences := tokenizer.TextsToSequences(tt.args.texts); !reflect.DeepEqual(gotSequences, tt.wantSequences) {
+				t.Errorf("Tokenizer.TextsToSequences() = %#v, want %#v", gotSequences, tt.wantSequences)
 			}
 		})
 	}

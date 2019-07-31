@@ -25,10 +25,14 @@ func TextToWordSequence(text string, config Config) (result []string) {
 				result = append(result, string(c))
 			}
 		}
-		return
+	} else {
+		text = strings.Replace(text, config.Split, " ", -1)
+		result = strings.Fields(text)
 	}
 
-	text = strings.Replace(text, config.Split, " ", -1)
-	result = strings.Fields(text)
+	if config.Ngram != DefaultNgram {
+		result = toNgram(result, config.Ngram)
+	}
+
 	return
 }
