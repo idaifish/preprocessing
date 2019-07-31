@@ -12,3 +12,4 @@ before_install:
 
 script:
   - go test -cpu=1,2 -v ./...
+  - go test -cover -coverprofile=cover.out -covermode=count

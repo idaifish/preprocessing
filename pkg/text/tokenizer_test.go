@@ -1,5 +1,5 @@
 // Package text provides utilities for text input preprocessing.
-// Go port of keras.preprocess.text
+// Go port of keras.preprocessing.text
 package text
 
 import (

@@ -1,4 +1,5 @@
 // Package sequence provides utilities for preprocessing sequence data.
+// Go port of keras.preprocessing.sequence
 package sequence
 
 // PadSequences pads sequences to the same length.
