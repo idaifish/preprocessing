@@ -169,6 +169,11 @@ func (tokenizer *Tokenizer) TextsToSequences(texts []string) (sequences [][]int)
 
 // SequencesToMatrix converts a list of sequences into matrix [][]float64.
 func (tokenizer *Tokenizer) SequencesToMatrix(sequences [][]int, mode string) (matrix [][]float64) {
+	matrix = make([][]float64, len(sequences))
+	for i := range matrix {
+		matrix[i] = make([]float64, tokenizer.NumWords)
+	}
+
 	if tokenizer.NumWords == 0 && len(tokenizer.WordIndex) == 0 {
 		panic(ErrValue)
 	}

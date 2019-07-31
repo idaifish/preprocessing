@@ -129,3 +129,50 @@ func TestTokenizer_TextsToSequencesWithNgram(t *testing.T) {
 		})
 	}
 }
+
+func TestTokenizer_TextsToMatrix(t *testing.T) {
+	type args struct {
+		texts []string
+		mode  string
+	}
+	tests := []struct {
+		name string
+		args args
+		want [][]float64
+	}{
+		// TODO: Add test cases.
+		{
+			"text2matrix1",
+			args{
+				[]string{"This is a text document to analyze."},
+				"tfidf",
+			},
+			[][]float64{
+				[]float64{0, 0, 0, 0, 0.6931471805599453, 0, 0, 0.6931471805599453, 0, 0},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			corpus := []string{
+				"This is the first document.",
+				"This is the second second document.",
+				"And the third one.",
+				"Is this the first document?",
+			}
+			tokenizer := NewTokenizer(10, NewConfig(
+				DefaultFilters,
+				DefaultLower,
+				DefaultSplit,
+				DefaultOOVToken,
+				DefaultCharLevel,
+				[2]int{1, 3},
+			))
+			tokenizer.FitOnTexts(corpus)
+
+			if got := tokenizer.TextsToMatrix(tt.args.texts, tt.args.mode); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("Tokenizer.TextsToMatrix() = %#v, want %#v", got, tt.want)
+			}
+		})
+	}
+}
